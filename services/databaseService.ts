@@ -1,5 +1,5 @@
 
-import { User, BetType } from '../types';
+import { User } from '../types';
 
 const STORAGE_KEY = 'tai_xiu_db_v2';
 
@@ -33,14 +33,38 @@ const initialDB: DB = {
 export const dbService = {
   getDB: (): DB => {
     const data = localStorage.getItem(STORAGE_KEY);
-    const db = data ? JSON.parse(data) : initialDB;
-    // Đảm bảo settings luôn tồn tại nếu nâng cấp từ bản cũ
-    if (!db.settings) db.settings = initialDB.settings;
-    return db;
+    if (!data) return initialDB;
+    try {
+      const db = JSON.parse(data);
+      if (!db.settings) db.settings = initialDB.settings;
+      if (!db.users) db.users = initialDB.users;
+      return db;
+    } catch (e) {
+      return initialDB;
+    }
   },
   
   saveDB: (db: DB) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    // Tạo sự kiện để các tab khác hoặc component khác biết dữ liệu đã đổi
+    window.dispatchEvent(new Event('storage_updated'));
+  },
+
+  getAllUsers: () => dbService.getDB().users,
+
+  deleteUser: (username: string) => {
+    const db = dbService.getDB();
+    db.users = db.users.filter(u => u.username !== username);
+    dbService.saveDB(db);
+  },
+
+  updateUser: (username: string, updates: Partial<User>) => {
+    const db = dbService.getDB();
+    const idx = db.users.findIndex(u => u.username === username);
+    if (idx !== -1) {
+      db.users[idx] = { ...db.users[idx], ...updates };
+      dbService.saveDB(db);
+    }
   },
 
   updateSettings: (newSettings: Partial<DB['settings']>) => {
@@ -49,9 +73,7 @@ export const dbService = {
     dbService.saveDB(db);
   },
 
-  getSettings: () => {
-    return dbService.getDB().settings;
-  },
+  getSettings: () => dbService.getDB().settings,
 
   updateUserBalance: (username: string, amount: number) => {
     const db = dbService.getDB();
@@ -68,9 +90,7 @@ export const dbService = {
     dbService.saveDB(db);
   },
 
-  getAdminOverride: () => {
-    return dbService.getDB().currentOverride;
-  },
+  getAdminOverride: () => dbService.getDB().currentOverride,
 
   addSessionToHistory: (sessionId: number, dice: [number, number, number]) => {
     const db = dbService.getDB();

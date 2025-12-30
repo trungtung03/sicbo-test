@@ -38,7 +38,6 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [isBowlOpenedLocally, setIsBowlOpenedLocally] = useState(false);
   
-  // State cho Chat và Hoạt động Online
   const [chatMessages, setChatMessages] = useState<Array<{user: string, msg: string, time: string}>>([
     {user: 'Admin', msg: 'Chúc anh em hôm nay rực rỡ nhé!', time: '10:00'},
     {user: 'Dân Chơi 9x', msg: 'Vừa húp quả bão 6 ngọt lịm!', time: '10:05'}
@@ -48,6 +47,20 @@ const App: React.FC = () => {
 
   const lastProcessedSession = useRef<number>(-1);
   const lastResetSession = useRef<number>(-1);
+
+  // Lắng nghe sự thay đổi database từ Admin Panel
+  useEffect(() => {
+    const handleStorageChange = () => {
+      if (currentUser) {
+        const db = dbService.getDB();
+        const updatedUser = db.users.find(u => u.username === currentUser.username);
+        if (updatedUser) setCurrentUser(updatedUser);
+        setHistory(db.sessionHistory);
+      }
+    };
+    window.addEventListener('storage_updated', handleStorageChange);
+    return () => window.removeEventListener('storage_updated', handleStorageChange);
+  }, [currentUser]);
 
   const getDeterministicDice = (sessionId: number): [number, number, number] => {
     const override = dbService.getAdminOverride();
@@ -103,7 +116,6 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Giả lập hoạt động của các người chơi khác (Sẽ thay bằng Webhook/Socket nếu có Backend)
   useEffect(() => {
     if (syncState.phase === 'BETTING') {
       const activityInterval = setInterval(() => {
@@ -181,7 +193,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20 overflow-x-hidden">
-      {/* HUD - Realtime Info */}
       <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-4 pointer-events-none">
         <div className="bg-zinc-900/95 border border-yellow-600/30 rounded-full px-8 py-3 flex items-center gap-8 shadow-2xl backdrop-blur-xl">
            <div className="flex flex-col items-center border-r border-white/10 pr-6">
@@ -216,8 +227,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-        
-        {/* CỘT TRÁI: CHAT ONLINE */}
         <aside className="lg:col-span-3 flex flex-col gap-4">
           <div className="glass-panel h-[500px] rounded-3xl border border-white/5 flex flex-col overflow-hidden">
              <div className="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between">
@@ -259,10 +268,8 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        {/* CỘT GIỮA: BÀN CHƠI */}
         <div className="lg:col-span-6 flex flex-col items-center">
           <DiceTable dice={syncState.dice} isRolling={syncState.phase === 'ROLLING'} isBowlOpened={isBowlOpenedLocally} timeLeft={syncState.timeLeft} onOpenBowl={handleOpenBowl} />
-          
           <div className="w-full mt-12 space-y-6">
             <div className="grid grid-cols-2 gap-6">
               {SICBO_OPTIONS.filter(o => o.category === BetCategory.BIG_SMALL).map(opt => {
@@ -284,7 +291,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* CỘT PHẢI: LỊCH SỬ & CHỌN CƯỢC */}
         <aside className="lg:col-span-3 flex flex-col gap-4">
           <div className="glass-panel p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center">
             <span className="text-[10px] font-black text-zinc-500 uppercase mb-4 tracking-widest">Mức cược</span>
