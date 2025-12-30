@@ -49,7 +49,19 @@ const App: React.FC = () => {
   const lastProcessedSession = useRef<number>(-1);
   const lastResetSession = useRef<number>(-1);
 
-  // Lắng nghe sự thay đổi database từ Admin Panel
+  // 1. KIỂM TRA ĐĂNG NHẬP CŨ KHI LOAD TRANG
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('activeUser');
+    if (savedUsername) {
+      const db = dbService.getDB();
+      const user = db.users.find(u => u.username === savedUsername);
+      if (user) {
+        setCurrentUser(user);
+      }
+    }
+  }, []);
+
+  // 2. LẮNG NGHE SỰ THAY ĐỔI CỦA DATABASE (TỪ ADMIN PANEL)
   useEffect(() => {
     const handleStorageChange = () => {
       const db = dbService.getDB();
@@ -58,12 +70,24 @@ const App: React.FC = () => {
       
       if (currentUser) {
         const updatedUser = db.users.find(u => u.username === currentUser.username);
-        if (updatedUser) setCurrentUser(updatedUser);
+        if (updatedUser) {
+          setCurrentUser(updatedUser);
+        }
       }
     };
     window.addEventListener('storage_updated', handleStorageChange);
     return () => window.removeEventListener('storage_updated', handleStorageChange);
   }, [currentUser]);
+
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('activeUser', user.username);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('activeUser');
+    setCurrentUser(null);
+  };
 
   const getDeterministicDice = (sessionId: number): [number, number, number] => {
     const override = dbService.getAdminOverride();
@@ -192,7 +216,7 @@ const App: React.FC = () => {
     setChatInput('');
   };
 
-  if (!currentUser) return <AuthModal onLogin={setCurrentUser} />;
+  if (!currentUser) return <AuthModal onLogin={handleLoginSuccess} />;
 
   return (
     <div className="min-h-screen bg-black text-white pb-20 overflow-x-hidden">
@@ -220,9 +244,14 @@ const App: React.FC = () => {
 
       <header className="w-full glass-panel p-4 mt-24 flex justify-between items-center px-6 md:px-12 border-b border-yellow-600/20">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-2 border-yellow-500 overflow-hidden shadow-lg"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`} alt="Avatar" /></div>
+          <div className="w-12 h-12 rounded-full border-2 border-yellow-500 overflow-hidden shadow-lg">
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`} alt="Avatar" />
+          </div>
           <div>
-            <div className="text-white font-black text-sm uppercase">{currentUser.username}</div>
+            <div className="text-white font-black text-sm uppercase flex items-center gap-2">
+              {currentUser.username}
+              <button onClick={handleLogout} className="text-[8px] text-zinc-500 hover:text-red-500 uppercase font-bold underline">Thoát</button>
+            </div>
             <div onClick={() => setIsWalletOpen(true)} className="text-yellow-500 font-black text-md cursor-pointer">{formatCurrency(currentUser.balance)}</div>
           </div>
         </div>
@@ -336,7 +365,7 @@ const App: React.FC = () => {
         settings={settings}
         onUpdateBalance={(newVal) => {
           dbService.updateUserBalance(currentUser.username, newVal - currentUser.balance);
-          setCurrentUser(prev => prev ? ({ ...prev, balance: newVal }) : null);
+          // UI tự động cập nhật qua useEffect lắng nghe storage_updated
         }} 
       />
     </div>

@@ -18,6 +18,7 @@ interface WalletModalProps {
 const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, settings, onUpdateBalance }) => {
   const [amount, setAmount] = useState<number>(100000);
   const [tab, setTab] = useState<'DEPOSIT' | 'WITHDRAW'>('DEPOSIT');
+  const [imageError, setImageError] = useState(false);
 
   if (!isOpen) return null;
 
@@ -40,11 +41,11 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, set
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-zinc-900 border-2 border-yellow-600 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300">
         <div className="flex bg-zinc-800/50">
-          <button onClick={() => setTab('DEPOSIT')} className={`flex-1 py-5 font-black tracking-widest text-sm transition-all ${tab === 'DEPOSIT' ? 'text-yellow-500 bg-zinc-900 border-b-2 border-yellow-500' : 'text-gray-500'}`}>NẠP TIỀN</button>
+          <button onClick={() => { setTab('DEPOSIT'); setImageError(false); }} className={`flex-1 py-5 font-black tracking-widest text-sm transition-all ${tab === 'DEPOSIT' ? 'text-yellow-500 bg-zinc-900 border-b-2 border-yellow-500' : 'text-gray-500'}`}>NẠP TIỀN</button>
           <button onClick={() => setTab('WITHDRAW')} className={`flex-1 py-5 font-black tracking-widest text-sm transition-all ${tab === 'WITHDRAW' ? 'text-yellow-500 bg-zinc-900 border-b-2 border-yellow-500' : 'text-gray-500'}`}>RÚT TIỀN</button>
         </div>
 
-        <div className="p-6 md:p-8">
+        <div className="p-6 md:p-8 overflow-y-auto max-h-[80vh] scrollbar-hide">
           {tab === 'DEPOSIT' ? (
             <div className="flex flex-col items-center">
               <div className="mb-4 w-full text-center">
@@ -54,17 +55,18 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, set
 
               <div className="w-full flex flex-col gap-6">
                 <div className="flex flex-col items-center bg-white p-2 rounded-2xl shadow-xl overflow-hidden min-h-[250px] justify-center relative">
-                  {settings.depositQrImage ? (
+                  {!imageError && settings.depositQrImage ? (
                     <img 
                       src={settings.depositQrImage}
                       alt="QR Nạp Tiền" 
                       className="w-full max-w-[280px] aspect-square object-contain rounded-xl"
-                      onError={(e) => {
-                         (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/000000/d4af37?text=LOI+ANH+QR';
-                      }}
+                      onError={() => setImageError(true)}
                     />
                   ) : (
-                    <div className="w-full max-w-[280px] aspect-square bg-zinc-100 flex items-center justify-center rounded-xl text-zinc-400 text-[10px] font-bold uppercase">Chưa có ảnh QR</div>
+                    <div className="w-full max-w-[280px] aspect-square bg-zinc-100 flex flex-col items-center justify-center rounded-xl gap-2">
+                       <div className="w-12 h-12 border-4 border-zinc-200 border-t-yellow-500 rounded-full animate-spin"></div>
+                       <span className="text-[10px] text-zinc-400 font-bold uppercase text-center px-4">Đang tải QR hoặc Admin chưa cập nhật</span>
+                    </div>
                   )}
                   <div className="bg-yellow-500 w-full text-center py-2 mt-2 rounded-lg">
                     <span className="text-[10px] text-black font-black uppercase tracking-tighter">QUÉT MÃ ĐỂ NẠP TỰ ĐỘNG</span>
@@ -74,19 +76,19 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, set
                 <div className="grid grid-cols-2 gap-3">
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Ngân hàng</p>
-                      <p className="text-xs font-black text-white">{settings.adminBankName || 'Đang cập nhật'}</p>
+                      <p className="text-xs font-black text-white">{settings.adminBankName || 'CHƯA CẬP NHẬT'}</p>
                    </div>
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Số tài khoản</p>
-                      <p className="text-xs font-black text-white tracking-widest">{settings.adminAccountNumber || 'Đang cập nhật'}</p>
+                      <p className="text-xs font-black text-white tracking-widest">{settings.adminAccountNumber || 'CHƯA CẬP NHẬT'}</p>
                    </div>
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Chủ tài khoản</p>
-                      <p className="text-xs font-black text-white">{settings.adminAccountName || 'Đang cập nhật'}</p>
+                      <p className="text-xs font-black text-white">{settings.adminAccountName || 'CHƯA CẬP NHẬT'}</p>
                    </div>
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
-                      <p className="text-[8px] text-zinc-500 font-bold uppercase">Nội dung</p>
-                      <p className="text-xs font-black text-yellow-500 uppercase">NAP {localStorage.getItem('currentUser') || 'GUEST'}</p>
+                      <p className="text-[8px] text-zinc-500 font-bold uppercase">Nội dung nạp</p>
+                      <p className="text-xs font-black text-yellow-500 uppercase">NAP {localStorage.getItem('activeUser') || 'GUEST'}</p>
                    </div>
                 </div>
               </div>
