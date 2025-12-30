@@ -23,10 +23,10 @@ const initialDB: DB = {
   sessionHistory: [],
   currentOverride: null,
   settings: {
-    depositQrImage: "https://i.ibb.co/LzfNqXQ/IMG-20240321-WA0000.jpg",
-    adminBankName: "MB BANK",
-    adminAccountName: "TRINH HUU DUY",
-    adminAccountNumber: "0123456789"
+    depositQrImage: "",
+    adminBankName: "Đang cập nhật",
+    adminAccountName: "Đang cập nhật",
+    adminAccountNumber: "Đang cập nhật"
   }
 };
 
@@ -36,9 +36,13 @@ export const dbService = {
     if (!data) return initialDB;
     try {
       const db = JSON.parse(data);
-      if (!db.settings) db.settings = initialDB.settings;
-      if (!db.users) db.users = initialDB.users;
-      return db;
+      // Đảm bảo cấu trúc object luôn đầy đủ
+      return {
+        ...initialDB,
+        ...db,
+        settings: { ...initialDB.settings, ...(db.settings || {}) },
+        users: db.users || initialDB.users
+      };
     } catch (e) {
       return initialDB;
     }
@@ -46,7 +50,7 @@ export const dbService = {
   
   saveDB: (db: DB) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    // Tạo sự kiện để các tab khác hoặc component khác biết dữ liệu đã đổi
+    // Phát sự kiện nội bộ cho tab hiện tại
     window.dispatchEvent(new Event('storage_updated'));
   },
 

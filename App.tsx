@@ -22,8 +22,18 @@ import { getMCCommentary } from './services/geminiService';
 import { dbService } from './services/databaseService';
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [settings, setSettings] = useState(dbService.getSettings());
+  // KHỞI TẠO TRỰC TIẾP TỪ STORAGE - GIÚP GIỮ ĐĂNG NHẬP KHI F5 TỨC THÌ
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedUsername = localStorage.getItem('activeUser');
+    if (savedUsername) {
+      const db = dbService.getDB();
+      return db.users.find(u => u.username === savedUsername) || null;
+    }
+    return null;
+  });
+
+  const [settings, setSettings] = useState(() => dbService.getSettings());
+  
   const [syncState, setSyncState] = useState({
     sessionId: 0,
     timeLeft: 0,
@@ -49,39 +59,35 @@ const App: React.FC = () => {
   const lastProcessedSession = useRef<number>(-1);
   const lastResetSession = useRef<number>(-1);
 
-  // 1. KIỂM TRA ĐĂNG NHẬP CŨ KHI LOAD TRANG
+  // LẮNG NGHE ĐỒNG BỘ DỮ LIỆU TOÀN CỤC
   useEffect(() => {
-    const savedUsername = localStorage.getItem('activeUser');
-    if (savedUsername) {
+    const handleSync = () => {
       const db = dbService.getDB();
-      const user = db.users.find(u => u.username === savedUsername);
-      if (user) {
-        setCurrentUser(user);
-      }
-    }
-  }, []);
-
-  // 2. LẮNG NGHE SỰ THAY ĐỔI CỦA DATABASE (TỪ ADMIN PANEL)
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const db = dbService.getDB();
-      setSettings(db.settings);
-      setHistory(db.sessionHistory);
+      // QUAN TRỌNG: Dùng {...db.settings} để tạo reference mới, buộc React cập nhật UI
+      setSettings({ ...db.settings });
+      setHistory([...db.sessionHistory]);
       
       if (currentUser) {
         const updatedUser = db.users.find(u => u.username === currentUser.username);
         if (updatedUser) {
-          setCurrentUser(updatedUser);
+          setCurrentUser({ ...updatedUser });
         }
       }
     };
-    window.addEventListener('storage_updated', handleStorageChange);
-    return () => window.removeEventListener('storage_updated', handleStorageChange);
+
+    window.addEventListener('storage_updated', handleSync);
+    // Lắng nghe cả sự thay đổi từ các tab khác
+    window.addEventListener('storage', handleSync);
+    
+    return () => {
+      window.removeEventListener('storage_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, [currentUser]);
 
   const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
     localStorage.setItem('activeUser', user.username);
+    setCurrentUser({ ...user });
   };
 
   const handleLogout = () => {
@@ -132,14 +138,13 @@ const App: React.FC = () => {
 
       if (phase === 'SHOWING' && lastProcessedSession.current !== currentSessionId) {
         dbService.addSessionToHistory(currentSessionId, dice);
-        setHistory(dbService.getDB().sessionHistory);
+        setHistory([...dbService.getDB().sessionHistory]);
         lastProcessedSession.current = currentSessionId;
       }
     };
 
     const interval = setInterval(updateSync, 1000);
     updateSync();
-    setHistory(dbService.getDB().sessionHistory);
     return () => clearInterval(interval);
   }, []);
 
@@ -167,7 +172,6 @@ const App: React.FC = () => {
     const winAmount = calculateWinnings(syncState.dice, userBets);
     if (winAmount > 0 && currentUser) {
       dbService.updateUserBalance(currentUser.username, winAmount);
-      setCurrentUser(prev => prev ? ({ ...prev, balance: prev.balance + winAmount }) : null);
       const sum = syncState.dice.reduce((a, b) => a + b, 0);
       getMCCommentary({ result: sum, type: sum >= 11 ? 'TÀI' : 'XỈU' }, true, currentUser.balance + winAmount).then(setMcMessage);
     }
@@ -206,7 +210,6 @@ const App: React.FC = () => {
       return [...prev, { optionId: option.id, amount: betAmountInput, category: option.category, payout: option.payout, value: option.value }];
     });
     setTotalBets(prev => ({ ...prev, [option.id]: (prev[option.id] || 0) + betAmountInput }));
-    setCurrentUser(prev => prev ? ({ ...prev, balance: prev.balance - betAmountInput }) : null);
   };
 
   const sendChat = () => {
@@ -365,7 +368,6 @@ const App: React.FC = () => {
         settings={settings}
         onUpdateBalance={(newVal) => {
           dbService.updateUserBalance(currentUser.username, newVal - currentUser.balance);
-          // UI tự động cập nhật qua useEffect lắng nghe storage_updated
         }} 
       />
     </div>
