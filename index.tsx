@@ -6,13 +6,12 @@ import App from './App';
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
-  throw new Error("Không tìm thấy phần tử root để gắn ứng dụng!");
+  console.error("LỖI: Không tìm thấy phần tử #root trong index.html");
+} else {
+  const root = createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 }
-
-const root = createRoot(rootElement);
-
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
