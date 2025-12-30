@@ -23,6 +23,7 @@ import { dbService } from './services/databaseService';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [settings, setSettings] = useState(dbService.getSettings());
   const [syncState, setSyncState] = useState({
     sessionId: 0,
     timeLeft: 0,
@@ -51,11 +52,13 @@ const App: React.FC = () => {
   // Lắng nghe sự thay đổi database từ Admin Panel
   useEffect(() => {
     const handleStorageChange = () => {
+      const db = dbService.getDB();
+      setSettings(db.settings);
+      setHistory(db.sessionHistory);
+      
       if (currentUser) {
-        const db = dbService.getDB();
         const updatedUser = db.users.find(u => u.username === currentUser.username);
         if (updatedUser) setCurrentUser(updatedUser);
-        setHistory(db.sessionHistory);
       }
     };
     window.addEventListener('storage_updated', handleStorageChange);
@@ -326,10 +329,16 @@ const App: React.FC = () => {
         />
       )}
 
-      <WalletModal isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} balance={currentUser.balance} onUpdateBalance={(newVal) => {
+      <WalletModal 
+        isOpen={isWalletOpen} 
+        onClose={() => setIsWalletOpen(false)} 
+        balance={currentUser.balance} 
+        settings={settings}
+        onUpdateBalance={(newVal) => {
           dbService.updateUserBalance(currentUser.username, newVal - currentUser.balance);
           setCurrentUser(prev => prev ? ({ ...prev, balance: newVal }) : null);
-      }} />
+        }} 
+      />
     </div>
   );
 };

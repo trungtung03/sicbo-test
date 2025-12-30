@@ -1,26 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { formatCurrency } from '../constants';
-import { dbService } from '../services/databaseService';
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
+  settings: {
+    depositQrImage: string;
+    adminBankName: string;
+    adminAccountName: string;
+    adminAccountNumber: string;
+  };
   onUpdateBalance: (newBalance: number) => void;
 }
 
-const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, onUpdateBalance }) => {
+const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, settings, onUpdateBalance }) => {
   const [amount, setAmount] = useState<number>(100000);
   const [tab, setTab] = useState<'DEPOSIT' | 'WITHDRAW'>('DEPOSIT');
-  const [settings, setSettings] = useState(dbService.getSettings());
-
-  // Cập nhật settings mỗi khi mở modal
-  useEffect(() => {
-    if (isOpen) {
-      setSettings(dbService.getSettings());
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -56,12 +53,19 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, onU
               </div>
 
               <div className="w-full flex flex-col gap-6">
-                <div className="flex flex-col items-center bg-white p-2 rounded-2xl shadow-xl overflow-hidden min-h-[250px] justify-center">
-                  <img 
-                    src={settings.depositQrImage}
-                    alt="QR Nạp Tiền" 
-                    className="w-full max-w-[280px] aspect-square object-contain rounded-xl"
-                  />
+                <div className="flex flex-col items-center bg-white p-2 rounded-2xl shadow-xl overflow-hidden min-h-[250px] justify-center relative">
+                  {settings.depositQrImage ? (
+                    <img 
+                      src={settings.depositQrImage}
+                      alt="QR Nạp Tiền" 
+                      className="w-full max-w-[280px] aspect-square object-contain rounded-xl"
+                      onError={(e) => {
+                         (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/000000/d4af37?text=LOI+ANH+QR';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full max-w-[280px] aspect-square bg-zinc-100 flex items-center justify-center rounded-xl text-zinc-400 text-[10px] font-bold uppercase">Chưa có ảnh QR</div>
+                  )}
                   <div className="bg-yellow-500 w-full text-center py-2 mt-2 rounded-lg">
                     <span className="text-[10px] text-black font-black uppercase tracking-tighter">QUÉT MÃ ĐỂ NẠP TỰ ĐỘNG</span>
                   </div>
@@ -70,15 +74,15 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, onU
                 <div className="grid grid-cols-2 gap-3">
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Ngân hàng</p>
-                      <p className="text-xs font-black text-white">{settings.adminBankName}</p>
+                      <p className="text-xs font-black text-white">{settings.adminBankName || 'Đang cập nhật'}</p>
                    </div>
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Số tài khoản</p>
-                      <p className="text-xs font-black text-white tracking-widest">{settings.adminAccountNumber}</p>
+                      <p className="text-xs font-black text-white tracking-widest">{settings.adminAccountNumber || 'Đang cập nhật'}</p>
                    </div>
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Chủ tài khoản</p>
-                      <p className="text-xs font-black text-white">{settings.adminAccountName}</p>
+                      <p className="text-xs font-black text-white">{settings.adminAccountName || 'Đang cập nhật'}</p>
                    </div>
                    <div className="bg-zinc-800/50 p-3 rounded-xl border border-white/5">
                       <p className="text-[8px] text-zinc-500 font-bold uppercase">Nội dung</p>
@@ -102,7 +106,6 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, balance, onU
             </div>
           ) : (
             <div>
-              {/* Rút tiền giữ nguyên */}
               <div className="mb-6">
                 <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-2">Số dư khả dụng</label>
                 <div className="text-4xl font-black text-white tracking-tighter">{formatCurrency(balance)}</div>
