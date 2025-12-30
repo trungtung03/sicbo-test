@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrency } from '../constants';
 import { dbService } from '../services/databaseService';
 import { User } from '../types';
@@ -16,6 +16,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSetOverride, currentOverride,
   const [users, setUsers] = useState<User[]>([]);
   const [rawJson, setRawJson] = useState('');
   const [settings, setSettings] = useState(dbService.getSettings());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (activeTab === 'USERS') {
@@ -52,6 +53,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSetOverride, currentOverride,
     const newSettings = { ...settings, [key]: value };
     dbService.updateSettings(newSettings);
     setSettings(newSettings);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Ảnh quá nặng! Vui lòng chọn ảnh dưới 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        updateBankInfo('depositQrImage', base64String);
+        alert("Đã tải lên ảnh QR mới!");
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -145,8 +163,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSetOverride, currentOverride,
                 <input placeholder="Tên Ngân hàng" value={settings.adminBankName} onChange={(e) => updateBankInfo('adminBankName', e.target.value)} className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs text-white" />
                 <input placeholder="Số tài khoản" value={settings.adminAccountNumber} onChange={(e) => updateBankInfo('adminAccountNumber', e.target.value)} className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs text-white" />
                 <input placeholder="Tên chủ thẻ" value={settings.adminAccountName} onChange={(e) => updateBankInfo('adminAccountName', e.target.value)} className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs text-white" />
-                <p className="text-[9px] text-zinc-500 italic mt-2">Dán link ảnh QR hoặc base64 vào đây:</p>
-                <textarea value={settings.depositQrImage} onChange={(e) => updateBankInfo('depositQrImage', e.target.value)} className="w-full bg-zinc-900 border border-white/5 rounded-xl p-2 text-[8px] h-20 text-zinc-400 font-mono" />
+                
+                <div className="pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase mb-2">Ảnh QR Nạp Tiền</p>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-32 h-32 bg-black/40 border border-white/10 rounded-xl overflow-hidden flex items-center justify-center">
+                      {settings.depositQrImage ? (
+                        <img src={settings.depositQrImage} className="w-full h-full object-contain" alt="QR Preview" />
+                      ) : (
+                        <span className="text-[8px] text-zinc-600 uppercase">Chưa có ảnh</span>
+                      )}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      onChange={handleImageUpload} 
+                    />
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-black rounded-lg transition-colors border border-white/5"
+                    >
+                      CHỌN ẢNH QR MỚI
+                    </button>
+                  </div>
+                </div>
              </div>
           </div>
         )}
