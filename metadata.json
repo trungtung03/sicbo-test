@@ -1,0 +1,8 @@
+{
+  "name": "Tài Xỉu Thượng Lưu - Casino Online",
+  "description": "Một ứng dụng mô phỏng trò chơi Tài Xỉu trực tuyến với đồ họa sang trọng, hệ thống nạp rút ảo và tương tác người chơi thời gian thực cùng MC AI Gemini.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
